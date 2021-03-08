@@ -6,7 +6,8 @@ use solana_program::{
     entrypoint,
     entrypoint::ProgramResult,
     msg,
-    program_error::{ProgramError, DecodeError},
+    program_error::ProgramError,
+    decode_error::DecodeError,
     pubkey::Pubkey,
 };
 use std::mem::size_of;
@@ -25,7 +26,7 @@ pub enum MessageFeedError {
 }
 impl From<MessageFeedError> for ProgramError {
     fn from(e: MessageFeedError) -> Self {
-        ProgramError::CustomError(e as u32)
+        ProgramError::Custom(e as u32)
     }
 }
 impl<T> DecodeError<T> for MessageFeedError {
