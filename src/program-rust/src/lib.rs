@@ -6,10 +6,10 @@ use solana_program::{
     entrypoint,
     entrypoint::ProgramResult,
     msg,
-    program_error::ProgramError,
+    program_error::{ProgramError, DecodeError},
     pubkey::Pubkey,
 };
-use std::mem;
+use std::mem::size_of;
 use thiserror::Error;
 use std::str::from_utf8;
 
@@ -95,7 +95,7 @@ fn process_instruction(
     }
 
     // The data must be large enough to hold a u32 count
-    if account.try_data_len()? < mem::size_of::<u32>() {
+    if account.try_data_len()? < size_of::<u32>() {
         msg!("Greeted account data length too small for u32");
         return Err(ProgramError::InvalidAccountData);
     }
@@ -128,7 +128,7 @@ mod test {
         let program_id = Pubkey::default();
         let key = Pubkey::default();
         let mut lamports = 0;
-        let mut data = vec![0; mem::size_of::<u32>()];
+        let mut data = vec![0; size_of::<u32>()];
         LittleEndian::write_u32(&mut data, 0);
         let owner = Pubkey::default();
         let account = AccountInfo::new(
