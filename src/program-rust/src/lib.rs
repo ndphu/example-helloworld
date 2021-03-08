@@ -85,22 +85,33 @@ fn process_instruction(
 
     let account_info_iter = &mut accounts.iter();
 
+    msg!("Debug 1");
+
     let user_account = next_account_info(account_info_iter)?;
     let mut user_data = user_account.data.borrow_mut();
     let user_data = UserAccountData::new(&mut user_data);
+
+    msg!("Debug 2");
 
     let message_account = next_account_info(account_info_iter)?;
     let mut new_message_data = message_account.data.borrow_mut();
     let new_message_data = MessageAccountData::new(&mut new_message_data);
 
+    msg!("Debug 3");
+
     if !user_account.is_signer {
         msg!("Error: not signed by key 0");
         return Err(ProgramError::MissingRequiredSignature);
     }
+
+    msg!("Debug 4");
+
     if !message_account.is_signer {
         msg!("Error: not signed by key 1");
         return Err(ProgramError::MissingRequiredSignature);
     }
+
+    msg!("Debug 5");
 
     if input.is_empty() {
         msg!("Creating user...");
@@ -108,6 +119,8 @@ fn process_instruction(
             .creator
             .clone_from_slice(message_account.key.as_ref());
     }
+
+    msg!("Debug 6");
 
     let mesg = from_utf8(input).map_err(|err| {
         msg!("Invalid UTF-8, from byte {}", err.valid_up_to());
