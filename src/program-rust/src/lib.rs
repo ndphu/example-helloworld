@@ -9,6 +9,8 @@ use solana_program::{
 };
 use std::mem;
 
+use std::str::from_utf8;
+
 // Declare and export the program's entrypoint
 entrypoint!(process_instruction);
 
@@ -16,7 +18,7 @@ entrypoint!(process_instruction);
 fn process_instruction(
     program_id: &Pubkey, // Public key of the account the hello world program was loaded into
     accounts: &[AccountInfo], // The account to say hello to
-    _instruction_data: &[u8], // Ignored, all helloworld instructions are hellos
+    input: &[u8], // Ignored, all helloworld instructions are hellos
 ) -> ProgramResult {
     msg!("Helloworld Rust program entrypoint");
 
@@ -37,6 +39,12 @@ fn process_instruction(
         msg!("Greeted account data length too small for u32");
         return Err(ProgramError::InvalidAccountData);
     }
+
+    let mesg = from_utf8(input).map_err(|err| {
+        msg!("Invalid UTF-8, from byte {}", err.valid_up_to());
+        ProgramError::InvalidInstructionData
+    })?;
+    msg!("Received message (len {}): {:?}", mesg.len(), mesg);
 
     // Increment and store the number of times the account has been greeted
     let mut data = account.try_borrow_mut_data()?;
