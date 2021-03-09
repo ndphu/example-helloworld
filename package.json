@@ -11,6 +11,7 @@
   "license": "MIT",
   "scripts": {
     "start": "ts-node src/client/main.ts",
+    "monitor": "ts-node src/client/monitor.ts",
     "start-with-test-validator": "start-server-and-test 'solana-test-validator --reset --quiet' http://localhost:8899/health start",
     "lint": "eslint --ext .ts src/client/* && prettier --check \"src/client/**/*.ts\"",
     "lint:fix": "eslint --ext .ts src/client/* --fix && prettier --write \"src/client/**/*.ts\"",
@@ -49,9 +50,12 @@
     "@solana/web3.js": "^0.93.0",
     "buffer-layout": "^1.2.0",
     "dotenv": "8.2.0",
+    "haikunator": "^2.1.2",
     "json-to-pretty-yaml": "^1.2.2",
     "mkdirp": "^1.0.4",
-    "mz": "^2.7.0"
+    "mz": "^2.7.0",
+    "readline-promise": "latest",
+    "readline-sync": "latest"
   },
   "engines": {
     "node": "12.x"

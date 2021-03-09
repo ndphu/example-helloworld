@@ -5,3 +5,6 @@
 .env
 src/client/util/store
 test-ledger/
+.idea/
+*.iml
+package-lock.json

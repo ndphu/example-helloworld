@@ -1,4 +1,3 @@
-use byteorder::{ByteOrder, LittleEndian};
 use arrayref::array_mut_ref;
 use num_derive::FromPrimitive;
 use solana_program::{
@@ -77,11 +76,13 @@ entrypoint!(process_instruction);
 
 // Program entrypoint's implementation
 fn process_instruction(
-    program_id: &Pubkey, // Public key of the account the hello world program was loaded into
-    accounts: &[AccountInfo], // The account to say hello to
-    input: &[u8], // Ignored, all helloworld instructions are hellos
+    _program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    input: &[u8],
 ) -> ProgramResult {
     msg!("Helloworld Rust program entrypoint");
+
+    msg!("Size of accounts {}", accounts.len());
 
     let account_info_iter = &mut accounts.iter();
 
@@ -90,7 +91,7 @@ fn process_instruction(
     let user_account = next_account_info(account_info_iter)?;
     let mut user_data = user_account.data.borrow_mut();
     let user_data = UserAccountData::new(&mut user_data);
-
+    
     msg!("Debug 2");
 
     let message_account = next_account_info(account_info_iter)?;
@@ -118,6 +119,57 @@ fn process_instruction(
         user_data
             .creator
             .clone_from_slice(message_account.key.as_ref());
+    } else {
+        msg!("Writing message...");
+        // Write the message text into new_message_data
+        new_message_data.text.clone_from_slice(input);
+
+        // Save the pubkey of who posted the message
+        msg!("Save public key of who posted the message");
+        new_message_data
+            .from
+            .clone_from_slice(user_account.key.as_ref());
+
+        if let Ok(existing_message_account) = next_account_info(account_info_iter) {
+            let mut existing_message_data = existing_message_account.data.borrow_mut();
+            let existing_message_data = MessageAccountData::new(&mut existing_message_data);
+
+            if existing_message_data.next_message != &[0; size_of::<PubkeyData>()] {
+                msg!("Error: account 1 already has a next_message");
+                return Err(MessageFeedError::NextMessageExists.into());
+            }
+
+            // Link the new_message to the existing_message
+            msg!("Link the new_message to the existing_message...");
+            existing_message_data
+                .next_message
+                .clone_from_slice(message_account.key.as_ref());
+
+            // Check if a user should be banned
+            msg!("Check if a user should be banned...");
+            if let Ok(ban_user_account) = next_account_info(account_info_iter) {
+                let mut ban_user_data = ban_user_account.data.borrow_mut();
+                let ban_user_data = UserAccountData::new(&mut ban_user_data);
+                *ban_user_data.banned = true;
+            }
+
+            // Propagate the chain creator to the new message
+            msg!("Propagate the chain creator to the new message...");
+            new_message_data
+                .creator
+                .clone_from_slice(existing_message_data.creator.as_ref());
+        } else {
+            // This is the first message in the chain, it is the "creator"
+            msg!("This is the first message in the chain, it is the 'creator'");
+            new_message_data
+                .creator
+                .clone_from_slice(message_account.key.as_ref());
+        }
+
+        if user_data.creator != new_message_data.creator {
+            msg!("user_data/new_message_data creator mismatch");
+            return Err(MessageFeedError::CreatorMismatch.into());
+        }
     }
 
     msg!("Debug 6");
@@ -131,40 +183,4 @@ fn process_instruction(
     msg!("Success");
 
     Ok(())
-}
-
-// Sanity tests
-#[cfg(test)]
-mod test {
-    use super::*;
-    use solana_program::clock::Epoch;
-
-    #[test]
-    fn test_sanity() {
-        let program_id = Pubkey::default();
-        let key = Pubkey::default();
-        let mut lamports = 0;
-        let mut data = vec![0; size_of::<u32>()];
-        LittleEndian::write_u32(&mut data, 0);
-        let owner = Pubkey::default();
-        let account = AccountInfo::new(
-            &key,
-            false,
-            true,
-            &mut lamports,
-            &mut data,
-            &owner,
-            false,
-            Epoch::default(),
-        );
-        let instruction_data: Vec<u8> = Vec::new();
-
-        let accounts = vec![account];
-
-        assert_eq!(LittleEndian::read_u32(&accounts[0].data.borrow()), 0);
-        process_instruction(&program_id, &accounts, &instruction_data).unwrap();
-        assert_eq!(LittleEndian::read_u32(&accounts[0].data.borrow()), 1);
-        process_instruction(&program_id, &accounts, &instruction_data).unwrap();
-        assert_eq!(LittleEndian::read_u32(&accounts[0].data.borrow()), 2);
-    }
 }

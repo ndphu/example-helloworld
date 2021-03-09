@@ -72,9 +72,9 @@ checksum = "9b34d609dfbaf33d6889b2b7106d3ca345eacad44200913df5ba02bfd31d2ba9"
 
 [[package]]
 name = "async-trait"
-version = "0.1.47"
+version = "0.1.48"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e098e9c493fdf92832223594d9a164f96bdf17ba81a42aff86f85c76768726a"
+checksum = "36ea56748e10732c49404c153638a15ec3d6211ec5ff35d9bb20e13b93576adf"
 dependencies = [
  "proc-macro2 1.0.24",
  "quote 1.0.9",
@@ -2297,9 +2297,9 @@ dependencies = [
 
 [[package]]
 name = "solana-crate-features"
-version = "1.5.13"
+version = "1.5.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4efe3deef81070a0199d6a61564f687922065ab378572c03e20e6fe927b846d"
+checksum = "10b41ed05a64819d081dbfb9e95da071298762c769e3be8efc148e90eb3d78c8"
 dependencies = [
  "backtrace",
  "bytes 0.4.12",
@@ -2321,9 +2321,9 @@ dependencies = [
 
 [[package]]
 name = "solana-frozen-abi"
-version = "1.5.13"
+version = "1.5.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ca562dc5282f8124e3df791b527904a85b6b4361c1899b39d09aeb7afa974b3"
+checksum = "3c3476d3735fcbd907c86095cf4de0272a11753354bfc8484556173d4a9b458e"
 dependencies = [
  "bs58",
  "bv",
@@ -2341,9 +2341,9 @@ dependencies = [
 
 [[package]]
 name = "solana-frozen-abi-macro"
-version = "1.5.13"
+version = "1.5.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e31181207a88d8b474f528ec9b5f21b4d46e014a345ad3d866e0b6c82f421fc8"
+checksum = "33137fde347f368f3a44992544a799e9cd64276d391b9e7339468512e919ffac"
 dependencies = [
  "lazy_static",
  "proc-macro2 1.0.24",
@@ -2354,9 +2354,9 @@ dependencies = [
 
 [[package]]
 name = "solana-logger"
-version = "1.5.13"
+version = "1.5.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ca735bd55081a956e3d72921d342ac5967b87443cc8a5b6d58fbca5b524c72d"
+checksum = "70991babdd9869469fbe29119958ce5a26bad54418ed3248ce172807e112f106"
 dependencies = [
  "env_logger",
  "lazy_static",
@@ -2448,9 +2448,9 @@ dependencies = [
 
 [[package]]
 name = "solana-rayon-threadlimit"
-version = "1.5.13"
+version = "1.5.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "135449bacc9f97b20c3d6c7570ac6929d818d8657b14d4da075de25c6d12dbc8"
+checksum = "9d885e4f25fd5f8e05de29fd67f0ac1450095a0d033dd8048a6abafde3e618d2"
 dependencies = [
  "lazy_static",
  "num_cpus",
@@ -2553,9 +2553,9 @@ dependencies = [
 
 [[package]]
 name = "solana-sdk-macro"
-version = "1.5.13"
+version = "1.5.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df8c8f6b1b2883bf6ac14245b10db27ceb55d1f72ccd032f4ae2c688fb78865a"
+checksum = "a41c78a955eb8c4b5cd72c2450520fc9434b1953f9398f91d13a89d5db841505"
 dependencies = [
  "bs58",
  "proc-macro2 1.0.24",
