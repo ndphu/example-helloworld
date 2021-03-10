@@ -174,6 +174,7 @@ export async function lookupLastMessage(messagePubkey: PublicKey, onNewMessage: 
     }
     // let parsed = Message.messageAccountDataLayout.decode(acc.data);
     let messageData = await Message.mapAccountInfoToMessageData(acc);
+    messageData.messagePubkey = messagePubkey;
     onNewMessage && onNewMessage(await Message.mapMessageData(messageData));
     if (messageData.nextMessage) {
         const nextMessage = messageData.nextMessage;
