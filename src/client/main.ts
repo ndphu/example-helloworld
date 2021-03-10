@@ -7,20 +7,24 @@ import {
     establishPayer,
     loadProgram,
     sayHello,
-    reportHellos,
     createUser,
-    createFirstPost,
+    createFirstPost, updateLastMessage, startMonitoringThread,
 } from './hello_world';
 
 const readline = require('readline');
 
 async function main() {
+
     await initialize();
+
+    await updateLastMessage();
+
+    startMonitoringThread();
 
     // await reportHellos();
     for (;;) {
-        const message = await askQuestion("Enter message:");
-        console.log("Sending message", message);
+        const message = await askQuestion("Enter message: ");
+        console.log("Sending...");
         await sayHello(message);
         console.log('Success');
     }

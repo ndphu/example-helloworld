@@ -26,52 +26,45 @@ export class Store {
         await fs.writeFile(filename, JSON.stringify(config), 'utf8');
     }
 
-    // async loadAppData(): Promise<AppData> {
-    //     const filename = path.join(Store.getDir(), "appData.json");
-    //     const data = await fs.readFile(filename, 'utf8');
-    //     return JSON.parse(data) as AppData;
-    // }
-    //
-    // async saveAppData(appData: AppData): Promise<void> {
-    //     await mkdirp(Store.getDir());
-    //     const filename = path.join(Store.getDir(), "appData.json");
-    //     await fs.writeFile(filename, JSON.stringify(appData), 'utf8');
-    // }
-
     async saveUserAccount(userAccount: Account): Promise<void> {
-        await mkdirp(Store.getDir());
-        const filename = path.join(Store.getDir(), "user.json");
-        const payload = {
-            publicKey: userAccount.publicKey.toBase58(),
-            secretKey: Buffer.from(userAccount.secretKey).toString('base64'),
-        };
-
-        await fs.writeFile(filename, JSON.stringify(payload), 'utf-8');
+        await this.saveAccountToFile(userAccount, "user.json");
     }
 
     async loadUserAccount(): Promise<Account> {
-        //return new Account(Uint8Array.from(Buffer.from(json.userAccount, 'hex')));
-        const filename = path.join(Store.getDir(), "user.json");
+        return await this.loadAccountFromFile("user.json");
+    }
+
+    async saveFirstMessageAccount(fma: Account): Promise<void> {
+        await this.saveAccountToFile(fma, "fma.json");
+    }
+
+    async loadFirstMessageAccount(): Promise<Account> {
+        return await this.loadAccountFromFile("fma.json");
+    }
+
+    async loadPayerAccount(): Promise<Account> {
+        return await this.loadAccountFromFile("payer.json");
+    }
+
+    async savePayerAccount(payerAccount: Account) {
+        await this.saveAccountToFile(payerAccount, "payer.json");
+    }
+
+    private async loadAccountFromFile(name: string) {
+        const filename = path.join(Store.getDir(), name);
         const data = await fs.readFile(filename, 'utf8');
         const payload = JSON.parse(data);
         return new Account(Buffer.from(payload.secretKey, 'base64'));
     }
 
-    async saveFirstMessageAccount(fma: Account): Promise<void> {
+    private async saveAccountToFile(fma: Account, file: string) {
         await mkdirp(Store.getDir());
-        const filename = path.join(Store.getDir(), "fma.json");
+        const filename = path.join(Store.getDir(), file);
         const payload = {
             publicKey: fma.publicKey.toBase58(),
             secretKey: Buffer.from(fma.secretKey).toString('base64'),
         };
 
         await fs.writeFile(filename, JSON.stringify(payload), 'utf-8');
-    }
-
-    async loadFirstMessageAccount(): Promise<Account> {
-        const filename = path.join(Store.getDir(), "fma.json");
-        const data = await fs.readFile(filename, 'utf8');
-        const payload = JSON.parse(data);
-        return new Account(Buffer.from(payload.secretKey, 'base64'));
     }
 }

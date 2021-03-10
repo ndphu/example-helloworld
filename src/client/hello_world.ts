@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 
-import {Account, BPF_LOADER_PROGRAM_ID, BpfLoader, Connection, LAMPORTS_PER_SOL, PublicKey,} from '@solana/web3.js';
+import {Account, BPF_LOADER_PROGRAM_ID, BpfLoader, Connection, PublicKey,} from '@solana/web3.js';
 
 import fs from 'mz/fs';
 // @ts-ignore
@@ -12,12 +12,10 @@ import BufferLayout from 'buffer-layout';
 import {url, urlTls} from './util/url';
 import {Store} from './util/store';
 import {newAccountWithLamports} from './util/new-account-with-lamports';
-import {newSystemAccountWithAirdrop} from "./util/new-system-account-with-airdrop";
 import * as Message from './message';
 import * as User from './user';
 import {publicKeyToName} from "./util/publickey-to-name";
 import * as readline from "readline";
-import {MessageData} from "./message";
 
 /**
  * Connection to the network
@@ -78,6 +76,8 @@ export async function establishPayer(): Promise<void> {
 
         // Fund a new payer via airdrop
         payerAccount = await newAccountWithLamports(connection, fees);
+
+        await new Store().savePayerAccount(payerAccount);
     }
 }
 
@@ -164,6 +164,47 @@ export async function createFirstPost(): Promise<void> {
     await store.saveFirstMessageAccount(messageFeed.firstMessageAccount);
 }
 
+
+let lastMessage : PublicKey;
+
+export async function lookupLastMessage(messagePubkey: PublicKey, onNewMessage: ((message: Message.Message) => void) | null) : Promise<PublicKey> {
+    let acc = await connection.getAccountInfo(messagePubkey);
+    if (!acc || !acc.data) {
+        throw new Error(`fail to get account info for pubkey "${messagePubkey.toBase58()}"`);
+    }
+    // let parsed = Message.messageAccountDataLayout.decode(acc.data);
+    let messageData = await Message.mapAccountInfoToMessageData(acc);
+    onNewMessage && onNewMessage(await Message.mapMessageData(messageData));
+    if (messageData.nextMessage) {
+        const nextMessage = messageData.nextMessage;
+        if (nextMessage.toBase58() === "11111111111111111111111111111111") {
+            return messagePubkey;
+        }
+        return await lookupLastMessage(nextMessage, onNewMessage);
+    }
+    return messagePubkey;
+}
+
+export async function updateLastMessage(): Promise<void> {
+    console.log("Updating last message...");
+    const store = new Store();
+    const firstMessageAccount = await store.loadFirstMessageAccount();
+
+    if (lastMessage) {
+        lastMessage =  await lookupLastMessage(lastMessage, null);
+    } else {
+        lastMessage = await lookupLastMessage(firstMessageAccount.publicKey, null);
+    }
+
+    console.log("Updated successfully!");
+}
+
+export async function startMonitoringThread(): Promise<void> {
+   await monitorThread(lastMessage, (message) => {
+       lastMessage = message.publicKey;
+   })
+}
+
 /**
  * Say hello
  */
@@ -174,29 +215,17 @@ export async function sayHello(message: string): Promise<void> {
     }
     const store = new Store();
     const userAccount = await store.loadUserAccount();
-    const firstMessageAccount = await store.loadFirstMessageAccount();
+    // await updateLastMessage();
 
-    const messages: Array<Message.Message> = [];
-
-    await Message.refreshMessageFeed(connection, messages, null, firstMessageAccount.publicKey);
-
-    const {feeCalculator} = await connection.getRecentBlockhash();
-    const postMessageFee = feeCalculator.lamportsPerSignature * 3; // 1 payer and 2 signer keys
-    const minAccountBalance = await connection.getMinimumBalanceForRentExemption(
-        User.messageAccountSize(message),
-    );
-    const payerAccount = await newSystemAccountWithAirdrop(
-        connection,
-        postMessageFee + minAccountBalance,
-    );
+    const payerAccount = await store.loadPayerAccount();
     await Message.postMessage(
         connection,
         payerAccount,
         userAccount,
         message,
-        messages[messages.length - 1].publicKey,
+        lastMessage,
     );
-
+    // lastMessage = newMessage.publicKey;
 }
 
 /**
@@ -230,20 +259,28 @@ export async function monitorMessage(message: PublicKey): Promise<Message.Messag
     });
 }
 
+export async function monitorThread(lastMessageKey: PublicKey, callback: ((message: Message.Message) => void) | null) {
+    let monitoringPubkey = lastMessageKey;
+    for (; ;) {
+        let message = await monitorMessage(monitoringPubkey);
+        callback && callback(message);
+        monitoringPubkey = message.publicKey;
+    }
+}
+
 export async function monitorFeeds(): Promise<void> {
     const store = new Store();
-    const messages: Array<Message.Message> = [];
+    // const messages: Array<Message.Message> = [];
     const firstMessageAccount = await store.loadFirstMessageAccount();
-    await Message.refreshMessageFeed(connection, messages, null, firstMessageAccount.publicKey);
-    for (let message of messages) {
+    // let lastMessageKey = await Message.refreshMessageFeed(connection, messages, (message) => {
+    //     console.log(message.name, ":", message.text, "(", message.publicKey.toBase58(), ")");
+    // }, firstMessageAccount.publicKey);
+    let lastMessageKey = await lookupLastMessage(firstMessageAccount.publicKey, (message) => {
         console.log(message.name, ":", message.text, "(", message.publicKey.toBase58(), ")");
-    }
-    let lastMessageKey = messages[messages.length - 1].publicKey;
-    for (; ;) {
-        let message = await monitorMessage(lastMessageKey);
-        lastMessageKey = message.publicKey;
+    });
+    await monitorThread(lastMessageKey, message => {
         console.log(message.name, ":", message.text, "(", message.publicKey.toBase58(), ")");
-    }
+    });
 
     const rl = readline.createInterface({
         input: process.stdin,

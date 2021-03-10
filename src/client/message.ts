@@ -12,7 +12,6 @@ import {
     TransactionSignature
 } from "@solana/web3.js";
 import {newSystemAccountWithAirdrop} from "./util/new-system-account-with-airdrop";
-import {Store} from "./util/store";
 import {publicKeyToName} from "./util/publickey-to-name";
 
 export type MessageFeedMeta = {
@@ -121,6 +120,27 @@ export async function readMessage(
     }
 }
 
+export async function mapAccountInfoToMessageData(accountInfo: AccountInfo<Buffer>): Promise<MessageData> {
+    const messageAccountData = messageAccountDataLayout.decode(accountInfo.data);
+
+    return {
+        messagePubkey: new PublicKey(0),
+        nextMessage: new PublicKey(messageAccountData.nextMessage),
+        from: new PublicKey(messageAccountData.from),
+        programId: accountInfo.owner,
+        text: messageAccountData.text,
+    };
+}
+
+export async function mapMessageData(messageData: MessageData) : Promise<Message> {
+    return {
+        publicKey: messageData.messagePubkey,
+        from: messageData.from,
+        name: publicKeyToName(messageData.from),
+        text: messageData.text,
+    }
+}
+
 /**
  * Parse message data
  */
@@ -145,10 +165,10 @@ export async function postMessage(
     text: string,
     previousMessage: PublicKey,
     userToBan: PublicKey | null = null,
-): Promise<TransactionSignature> {
+): Promise<Account> {
     const messageData = await readMessage(connection, previousMessage);
     const messageAccount = new Account();
-    return postMessageWithProgramId(
+    await postMessageWithProgramId(
         connection,
         messageData.programId,
         payerAccount,
@@ -158,6 +178,7 @@ export async function postMessage(
         previousMessage,
         userToBan,
     );
+    return messageAccount;
 }
 
 export async function postMessageWithProgramId(
@@ -235,14 +256,14 @@ export async function postMessageWithProgramId(
 export async function refreshMessageFeed(
     connection: Connection,
     messages: Array<Message>,
-    onNewMessage: Function | null,
+    onNewMessage: ((message: Message) => void) | null,
     message: PublicKey | null = null,
-): Promise<void> {
+): Promise<PublicKey> {
     const emptyMessage = new PublicKey(0);
     for (; ;) {
         if (message === null) {
             if (messages.length === 0) {
-                return;
+                return new PublicKey(0);
             }
             const lastMessage = messages[messages.length - 1].publicKey;
             const lastMessageData = await readMessage(connection, lastMessage);
@@ -250,17 +271,18 @@ export async function refreshMessageFeed(
         }
 
         if (message.equals(emptyMessage)) {
-            return;
+            return message;
         }
 
         const messageData = await readMessage(connection, message);
-        messages.push({
+        let result = {
             publicKey: message,
             from: messageData.from,
             name: publicKeyToName(messageData.from),
             text: messageData.text,
-        });
-        onNewMessage && onNewMessage();
+        };
+        messages.push(result);
+        onNewMessage && onNewMessage(result);
         message = messageData.nextMessage;
     }
 }
