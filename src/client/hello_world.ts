@@ -16,6 +16,7 @@ import * as Message from './message';
 import * as User from './user';
 import {publicKeyToName} from "./util/publickey-to-name";
 import * as readline from "readline";
+import {sleep} from "./util/sleep";
 
 /**
  * Connection to the network
@@ -165,9 +166,9 @@ export async function createFirstPost(): Promise<void> {
 }
 
 
-let lastMessage : PublicKey;
+let lastMessagePubkey: PublicKey;
 
-export async function lookupLastMessage(messagePubkey: PublicKey, onNewMessage: ((message: Message.Message) => void) | null) : Promise<PublicKey> {
+export async function lookupLastMessage(messagePubkey: PublicKey, onNewMessage: ((message: Message.Message) => void) | null): Promise<PublicKey> {
     let acc = await connection.getAccountInfo(messagePubkey);
     if (!acc || !acc.data) {
         throw new Error(`fail to get account info for pubkey "${messagePubkey.toBase58()}"`);
@@ -191,42 +192,51 @@ export async function updateLastMessage(): Promise<void> {
     const store = new Store();
     const firstMessageAccount = await store.loadFirstMessageAccount();
 
-    if (lastMessage) {
-        lastMessage =  await lookupLastMessage(lastMessage, null);
+    if (lastMessagePubkey) {
+        lastMessagePubkey = await lookupLastMessage(lastMessagePubkey, null);
     } else {
-        lastMessage = await lookupLastMessage(firstMessageAccount.publicKey, null);
+        lastMessagePubkey = await lookupLastMessage(firstMessageAccount.publicKey, null);
     }
 
     console.log("Updated successfully!");
 }
 
 export async function startMonitoringThread(): Promise<void> {
-   await monitorThread(lastMessage, (message) => {
-       lastMessage = message.publicKey;
-   })
+    await monitorThread(lastMessagePubkey, (message) => {
+        lastMessagePubkey = message.publicKey;
+    })
 }
 
 /**
- * Say hello
+ * Send message
  */
-export async function sayHello(message: string): Promise<void> {
+export async function sendMessage(message: string): Promise<void> {
     if (!message) {
         console.log("empty message");
         return
     }
     const store = new Store();
     const userAccount = await store.loadUserAccount();
-    // await updateLastMessage();
-
     const payerAccount = await store.loadPayerAccount();
-    await Message.postMessage(
-        connection,
-        payerAccount,
-        userAccount,
-        message,
-        lastMessage,
-    );
-    // lastMessage = newMessage.publicKey;
+
+    let numTries = 0;
+    let maxTries = 3;
+    for (; numTries < maxTries; numTries++) {
+        try {
+            await Message.postMessage(
+                connection,
+                payerAccount,
+                userAccount,
+                message,
+                lastMessagePubkey,
+            );
+            break;
+        } catch (e) {
+            console.log("Fail to post message. Retrying...");
+            await sleep(250);
+        }
+    }
+
 }
 
 /**
@@ -271,11 +281,7 @@ export async function monitorThread(lastMessageKey: PublicKey, callback: ((messa
 
 export async function monitorFeeds(): Promise<void> {
     const store = new Store();
-    // const messages: Array<Message.Message> = [];
     const firstMessageAccount = await store.loadFirstMessageAccount();
-    // let lastMessageKey = await Message.refreshMessageFeed(connection, messages, (message) => {
-    //     console.log(message.name, ":", message.text, "(", message.publicKey.toBase58(), ")");
-    // }, firstMessageAccount.publicKey);
     let lastMessageKey = await lookupLastMessage(firstMessageAccount.publicKey, (message) => {
         console.log(message.name, ":", message.text, "(", message.publicKey.toBase58(), ")");
     });

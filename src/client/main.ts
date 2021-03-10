@@ -6,7 +6,7 @@ import {
     establishConnection,
     establishPayer,
     loadProgram,
-    sayHello,
+    sendMessage,
     createUser,
     createFirstPost, updateLastMessage, startMonitoringThread,
 } from './hello_world';
@@ -25,7 +25,7 @@ async function main() {
     for (;;) {
         const message = await askQuestion("Enter message: ");
         console.log("Sending...");
-        await sayHello(message);
+        await sendMessage(message);
         console.log('Success');
     }
 }
